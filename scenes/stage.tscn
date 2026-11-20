@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://dp0854jhvyt3e" path="res://scripts/stage.gd" id="1_gi7kc"]
 [ext_resource type="PackedScene" uid="uid://cvaf5ce257nxi" path="res://scenes/player.tscn" id="2_kewym"]
 [ext_resource type="Script" uid="uid://cqsbppsp28gkc" path="res://scripts/bullet_manager.gd" id="3_6c5u0"]
-[ext_resource type="Script" uid="uid://cfy8o7dlsxir0" path="res://scripts/pattern_emitter.gd" id="4_vcsse"]
+[ext_resource type="Script" uid="uid://boos0nxll6qsx" path="res://scripts/wave_spawner.gd" id="4_6c5u0"]
 
 [node name="Stage" type="Node2D"]
 script = ExtResource("1_gi7kc")
@@ -13,5 +13,5 @@ script = ExtResource("1_gi7kc")
 [node name="BulletManager" type="Node2D" parent="."]
 script = ExtResource("3_6c5u0")
 
-[node name="Emitter" type="Node2D" parent="."]
-script = ExtResource("4_vcsse")
+[node name="WaveSpawner" type="Node2D" parent="."]
+script = ExtResource("4_6c5u0")
