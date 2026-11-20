@@ -11,6 +11,8 @@ enum Pattern { AIMED, RING, SPIRAL }
 @export var spin_deg := 7.0          # spiral: how far the angle advances each shot
 @export var bullet_radius := 5.0
 @export var bullet_color := Color(1.0, 0.35, 0.45)
+@export var start_delay := 0.0       # seconds to wait before the first shot
+@export var active := true           # when false, the emitter pauses (timer included)
 
 var manager: BulletManager
 var target: Node2D
@@ -18,14 +20,20 @@ var target: Node2D
 var _timer := 0.0
 var _spin := 0.0
 
+## Applies the start delay so the first shot doesn't happen instantly.
+func _ready() -> void:
+	_timer = start_delay
+
+## Counts down the fire timer and fires when it reaches zero (does nothing while inactive).
 func _process(delta: float) -> void:
-	if manager == null:
+	if manager == null or not active:
 		return
 	_timer -= delta
 	if _timer <= 0.0:
 		_timer += fire_interval
 		_fire()
 
+## Fires one volley of the selected pattern.
 func _fire() -> void:
 	match pattern:
 		Pattern.AIMED:
@@ -36,7 +44,7 @@ func _fire() -> void:
 			_fire_ring(deg_to_rad(_spin))
 			_spin += spin_deg
 
-# A fan of bullets centered on the player
+## A fan of bullets centered on the player
 func _fire_aimed() -> void:
 	if target == null:
 		return
@@ -47,13 +55,11 @@ func _fire_aimed() -> void:
 		var angle := base + lerpf(-spread / 2.0, spread / 2.0, t)
 		_spawn(angle)
 
-# Evenly spaced bullets around a circle (also the building block of spirals)
+## Evenly spaced bullets around a circle (also the building block of spirals)
 func _fire_ring(offset: float) -> void:
 	for i in bullet_count:
 		_spawn(offset + TAU * i / bullet_count)
 
+## Spawns a single bullet at this emitter's position, flying in the given direction (radians).
 func _spawn(angle: float) -> void:
 	manager.spawn(global_position, Vector2.from_angle(angle) * bullet_speed, bullet_radius, bullet_color)
-
-func _draw() -> void:
-	draw_circle(Vector2.ZERO, 14, Color(0.7, 0.4, 0.9))
