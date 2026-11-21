@@ -9,15 +9,19 @@ signal died(enemy: Enemy)
 ## HOVER: descends to hover_y, stays for hover_time seconds, then leaves back upward.
 enum PathType { STRAIGHT, SINE, HOVER }
 
-const BODY_RADIUS := 14.0
+const BODY_RADIUS := 14.0      # default body size (a config can override it with "radius")
 const FLASH_TIME := 0.08       # seconds the body turns white after a hit
 const MAX_LIFETIME := 60.0     # failsafe: remove enemies that somehow never leave
 
-var max_hp := 10
-var hp := 10
+var max_hp := 10.0
+var hp := 10.0
 var score_value := 100
 ## Items dropped on death, e.g. {"power": 1, "point": 2}
 var drops := {}
+## Bosses are always chosen first by the bomb's orbs.
+var is_boss := false
+## Body size in pixels. Bigger enemies are preferred by the bomb after bosses.
+var body_radius := BODY_RADIUS
 var path_type: PathType = PathType.STRAIGHT
 var velocity := Vector2(0, 90)
 var sway_amplitude := 60.0
@@ -41,6 +45,8 @@ func setup(config: Dictionary, bullet_manager: BulletManager, target_node: Node2
 	hp = max_hp
 	score_value = config.get("score", 100)
 	drops = config.get("drops", {})
+	is_boss = config.get("boss", false)
+	body_radius = config.get("radius", BODY_RADIUS)
 	path_type = config.get("path", PathType.STRAIGHT)
 	velocity = config.get("velocity", Vector2(0, 90))
 	sway_amplitude = config.get("sway_amplitude", 60.0)
@@ -64,10 +70,13 @@ func setup(config: Dictionary, bullet_manager: BulletManager, target_node: Node2
 	_emitter.target = target_node
 	add_child(_emitter)
 
-## Builds the collision circle in code and starts listening for player shots.
+## Builds the collision circle in code, joins the "enemies" group (used by homing shots and bombs),
+## and starts listening for player shots.
 func _ready() -> void:
+	add_to_group("enemies")
+
 	var shape := CircleShape2D.new()
-	shape.radius = BODY_RADIUS
+	shape.radius = body_radius
 	var collision := CollisionShape2D.new()
 	collision.shape = shape
 	add_child(collision)
@@ -88,13 +97,13 @@ func _process(delta: float) -> void:
 		queue_free()
 
 ## Reduces HP, flashes the body, and handles death (emits `died`, then removes the enemy).
-func take_damage(amount: int) -> void:
+func take_damage(amount: float) -> void:
 	if _dead:
 		return
 	hp -= amount
 	_flash = FLASH_TIME
 	queue_redraw()
-	if hp <= 0:
+	if hp <= 0.0:
 		_dead = true
 		died.emit(self)
 		queue_free()
@@ -141,11 +150,11 @@ func _update_flash(delta: float) -> void:
 ## Draws the body (white while flashing) and a small HP bar once the enemy is damaged.
 func _draw() -> void:
 	var color := Color.WHITE if _flash > 0.0 else body_color
-	draw_circle(Vector2.ZERO, BODY_RADIUS, color)
-	draw_arc(Vector2.ZERO, BODY_RADIUS, 0.0, TAU, 24, Color(1, 1, 1, 0.6), 1.5)
+	draw_circle(Vector2.ZERO, body_radius, color)
+	draw_arc(Vector2.ZERO, body_radius, 0.0, TAU, 24, Color(1, 1, 1, 0.6), 1.5)
 	if hp < max_hp:
-		var width := 28.0
-		var ratio := clampf(float(hp) / max_hp, 0.0, 1.0)
-		var top := -BODY_RADIUS - 10.0
+		var width := body_radius * 2.0
+		var ratio := clampf(hp / max_hp, 0.0, 1.0)
+		var top := -body_radius - 10.0
 		draw_rect(Rect2(-width / 2.0, top, width, 3.0), Color(0, 0, 0, 0.6))
 		draw_rect(Rect2(-width / 2.0, top, width * ratio, 3.0), Color(0.4, 1.0, 0.4))

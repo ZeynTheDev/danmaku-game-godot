@@ -58,6 +58,20 @@ func spawn(pos: Vector2, vel: Vector2, radius := 5.0, color := Color(1.0, 0.35, 
 func clear() -> void:
 	bullets.clear()
 
+## Removes every bullet that overlaps the given circle (used by bombs). Returns how many were removed.
+func clear_in_circle(center: Vector2, radius: float) -> int:
+	var removed := 0
+	# Iterate backwards so swap-and-pop removal is safe
+	var i := bullets.size() - 1
+	while i >= 0:
+		var b: Bullet = bullets[i]
+		var reach := radius + b.radius
+		if b.pos.distance_squared_to(center) <= reach * reach:
+			_remove_at(i)
+			removed += 1
+		i -= 1
+	return removed
+
 func _process(delta: float) -> void:
 	var hit := false
 	var can_hit := player != null and player.is_vulnerable()
