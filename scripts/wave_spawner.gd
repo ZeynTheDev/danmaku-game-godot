@@ -11,20 +11,26 @@ var target: Node2D
 
 ## Reusable enemy presets. Keys match the config read by Enemy.setup().
 var enemy_types := {
-	# Falls straight down and shoots a fan of bullets at the player
+	# Falls straight down and shoots a fan of bullets at the player. Drops point or power 50:50.
 	"fairy_aimed": {
 		"hp": 8, "score": 100,
-		"drops": {"point": 1},
+		"drop_table": {"rolls": 1, "entries": [
+			{"drop": "point", "weight": 50},
+			{"drop": "power", "weight": 50},
+		]},
 		"path": Enemy.PathType.STRAIGHT,
 		"velocity": Vector2(0, 70),
 		"pattern": PatternEmitter.Pattern.AIMED,
 		"interval": 1.2, "count": 3, "spread": 30.0, "bullet_speed": 170.0,
 		"color": Color(0.4, 0.7, 1.0), "bullet_color": Color(0.5, 0.8, 1.0),
 	},
-	# Sways side to side while dropping small rings
+	# Sways side to side while dropping small rings. Drops point or power 50:50.
 	"fairy_sine": {
 		"hp": 10, "score": 150,
-		"drops": {"point": 1},
+		"drop_table": {"rolls": 1, "entries": [
+			{"drop": "point", "weight": 50},
+			{"drop": "power", "weight": 50},
+		]},
 		"path": Enemy.PathType.SINE,
 		"velocity": Vector2(0, 80),
 		"sway_amplitude": 80.0, "sway_frequency": 2.0,
@@ -32,15 +38,38 @@ var enemy_types := {
 		"interval": 1.5, "count": 8, "bullet_speed": 120.0,
 		"color": Color(0.5, 0.9, 0.5), "bullet_color": Color(0.6, 1.0, 0.6),
 	},
-	# Tougher: stops, fires a spiral for a few seconds, then leaves. Drops power.
+	# Tougher: stops, fires a spiral for a few seconds, then leaves. Four rolls, 30 point : 70 power.
 	"fairy_hover": {
 		"hp": 60, "score": 500,
-		"drops": {"power": 3, "point": 3},
+		"drop_table": {"rolls": 4, "entries": [
+			{"drop": "point", "weight": 30},
+			{"drop": "power", "weight": 70},
+		]},
 		"path": Enemy.PathType.HOVER,
 		"velocity": Vector2(0, 100), "hover_y": 150.0, "hover_time": 6.0,
 		"pattern": PatternEmitter.Pattern.SPIRAL,
 		"interval": 0.08, "count": 3, "spin": 11.0, "bullet_speed": 130.0,
 		"color": Color(0.9, 0.5, 0.7), "bullet_color": Color(1.0, 0.6, 0.8),
+	},
+	# TEST: a "carrier" that always drops one bomb.
+	"fairy_carrier": {
+		"hp": 14, "score": 200,
+		"guaranteed": {"bomb": 1},
+		"path": Enemy.PathType.STRAIGHT,
+		"velocity": Vector2(0, 60),
+		"pattern": PatternEmitter.Pattern.AIMED,
+		"interval": 1.0, "count": 5, "spread": 50.0, "bullet_speed": 160.0,
+		"color": Color(1.0, 0.85, 0.3), "bullet_color": Color(1.0, 0.9, 0.5),
+	},
+	# TEST: a big elite that always drops a life (plus some power). Stands in for a mid-boss.
+	"fairy_elite": {
+		"hp": 120, "score": 1000, "radius": 22.0,
+		"guaranteed": {"life": 1, "power": 4},
+		"path": Enemy.PathType.HOVER,
+		"velocity": Vector2(0, 90), "hover_y": 140.0, "hover_time": 8.0,
+		"pattern": PatternEmitter.Pattern.SPIRAL,
+		"interval": 0.1, "count": 4, "spin": 9.0, "bullet_speed": 140.0,
+		"color": Color(0.8, 0.3, 0.9), "bullet_color": Color(0.9, 0.5, 1.0),
 	},
 }
 
@@ -53,6 +82,8 @@ var waves := [
 	{"time": 14.0, "type": "fairy_hover", "count": 2, "interval": 2.0, "x": 0.3, "x_step": 0.4},
 	{"time": 24.0, "type": "fairy_aimed", "count": 8, "interval": 0.4, "x": 0.1, "x_step": 0.1,
 		"override": {"bullet_speed": 220.0}},
+	{"time": 30.0, "type": "fairy_carrier", "count": 1, "x": 0.5},
+	{"time": 34.0, "type": "fairy_elite", "count": 1, "x": 0.5},
 ]
 
 var _events: Array = []   # every single enemy spawn, sorted by time
@@ -101,9 +132,9 @@ func _spawn_enemy(event: Dictionary) -> void:
 	add_child(enemy)
 	_alive += 1
 
-## Forwards an enemy's death (position, drops, score) to whoever listens, i.e. the stage.
+## Forwards an enemy's death (position, rolled drops, score) to whoever listens, i.e. the stage.
 func _on_enemy_died(enemy: Enemy) -> void:
-	enemy_died.emit(enemy.global_position, enemy.drops, enemy.score_value)
+	enemy_died.emit(enemy.global_position, enemy.roll_drops(), enemy.score_value)
 
 ## Counts enemies down whenever one is removed (killed or left the screen).
 func _on_enemy_gone() -> void:

@@ -18,6 +18,9 @@ const POWER_LOSS_ON_DEATH := 20
 const DEATHBOMB_WINDOW := 0.3   # seconds after a hit during which a bomb still saves the life
 const BOMB_DURATION := 3.0      # how long a bomb lasts (seconds)
 const BOMB_GRACE := 0.5         # extra invincibility after a bomb ends (seconds)
+const MAX_LIVES := 5
+const MAX_BOMBS := 7
+const COLLECT_ALL_MIN_POWER := 100   # power needed for the "collect all items" line to work
 
 @export var speed_normal := 300.0
 @export var speed_focus := 130.0
@@ -25,7 +28,7 @@ const BOMB_GRACE := 0.5         # extra invincibility after a bomb ends (seconds
 @export var margin := 14.0      # keeps the sprite inside the playfield edge
 @export var start_lives := 3
 @export var start_bombs := 3
-@export_range(0, 128) var start_power := 0   # handy for testing power levels (128 = MAX_POWER)
+@export_range(0, 128) var start_power := 32   # handy for testing power levels (128 = MAX_POWER)
 @export var respawn_invincibility := 2.0   # seconds
 
 ## Shot setup used by _shoot(). See player_kit.gd for the format.
@@ -92,6 +95,25 @@ func add_power(amount: int) -> void:
 	power = mini(power + amount, MAX_POWER)
 	if power != before:
 		queue_redraw()   # the gold MAX ring may need to appear
+
+## Adds one life (up to MAX_LIVES). Returns false if the player is out of lives or already at the cap.
+func add_life() -> bool:
+	if lives <= 0 or lives >= MAX_LIVES:
+		return false
+	lives += 1
+	return true
+
+## Adds one bomb (up to MAX_BOMBS). Returns false if the player is already at the cap.
+func add_bomb() -> bool:
+	if bombs >= MAX_BOMBS:
+		return false
+	bombs += 1
+	return true
+
+## True when flying above the collect line pulls in every item. For now this needs COLLECT_ALL_MIN_POWER.
+## A later stage-dependent rule (for example, ignoring the power requirement in late stages) belongs here.
+func can_collect_all_items() -> bool:
+	return power >= COLLECT_ALL_MIN_POWER
 
 ## Returns the index of the highest shot level in the kit that the current power has reached.
 func get_power_level() -> int:
