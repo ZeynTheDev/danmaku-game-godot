@@ -9,6 +9,14 @@
 script = ExtResource("1_gi7kc")
 
 [node name="Player" parent="." instance=ExtResource("2_kewym")]
+speed_normal = null
+speed_focus = null
+fire_rate = null
+margin = null
+start_lives = null
+start_bombs = null
+start_power = null
+respawn_invincibility = null
 
 [node name="BulletManager" type="Node2D" parent="."]
 script = ExtResource("3_6c5u0")

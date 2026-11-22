@@ -1,6 +1,9 @@
 class_name Bomb
 extends Node2D
 
+## Emitted whenever the bomb removes bullets. The stage turns the count into score.
+signal bullets_wiped(count: int)
+
 const GROW_TIME := 0.5            # seconds to reach full size
 const FADE_TIME := 0.6            # the last seconds, during which everything fades out
 const FIELD_FADE_TIME := 0.4      # how fast the field fades once every orb has launched
@@ -87,15 +90,18 @@ func _update_field_alpha(delta: float) -> void:
 		_field_alpha = maxf(0.0, _field_alpha - delta / FIELD_FADE_TIME)
 
 ## Removes bullets inside the (enlarged) wipe area around the player while the field is active,
-## and around every flying orb.
+## and around every flying orb. Reports how many were removed so they can be scored.
 func _wipe_bullets() -> void:
 	if bullets == null:
 		return
+	var wiped := 0
 	if _field_alpha > 0.0:
-		bullets.clear_in_circle(position, _radius * WIPE_RADIUS_SCALE)
+		wiped += bullets.clear_in_circle(position, _radius * WIPE_RADIUS_SCALE)
 	for orb in _orbs:
 		if orb.flying and not orb.done:
-			bullets.clear_in_circle(orb.pos, ORB_WIPE_RADIUS)
+			wiped += bullets.clear_in_circle(orb.pos, ORB_WIPE_RADIUS)
+	if wiped > 0:
+		bullets_wiped.emit(wiped)
 
 ## Every TICK_TIME seconds, damages each enemy inside the visible field (while the field is active).
 func _damage_enemies_in_field(delta: float) -> void:

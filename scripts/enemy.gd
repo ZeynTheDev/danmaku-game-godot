@@ -16,8 +16,11 @@ const MAX_LIFETIME := 60.0     # failsafe: remove enemies that somehow never lea
 var max_hp := 10.0
 var hp := 10.0
 var score_value := 100
-## Items dropped on death, e.g. {"power": 1, "point": 2}
-var drops := {}
+## Items that always drop on death, e.g. {"power": 1, "bomb": 1}. Names: power, point, bomb, life.
+var guaranteed := {}
+## Optional random drops, e.g. {"rolls": 2, "entries": [{"drop": "point", "weight": 50}, {"drop": "power", "weight": 50}]}.
+## Each roll picks one entry by weight. An entry named "none" means nothing drops for that roll.
+var drop_table := {}
 ## Bosses are always chosen first by the bomb's orbs.
 var is_boss := false
 ## Body size in pixels. Bigger enemies are preferred by the bomb after bosses.
@@ -44,7 +47,8 @@ func setup(config: Dictionary, bullet_manager: BulletManager, target_node: Node2
 	max_hp = config.get("hp", 10)
 	hp = max_hp
 	score_value = config.get("score", 100)
-	drops = config.get("drops", {})
+	guaranteed = config.get("guaranteed", {})
+	drop_table = config.get("drop_table", {})
 	is_boss = config.get("boss", false)
 	body_radius = config.get("radius", BODY_RADIUS)
 	path_type = config.get("path", PathType.STRAIGHT)
@@ -158,3 +162,29 @@ func _draw() -> void:
 		var top := -body_radius - 10.0
 		draw_rect(Rect2(-width / 2.0, top, width, 3.0), Color(0, 0, 0, 0.6))
 		draw_rect(Rect2(-width / 2.0, top, width * ratio, 3.0), Color(0.4, 1.0, 0.4))
+
+## Works out what this enemy drops: everything in `guaranteed`, plus one weighted random pick per roll
+## in `drop_table`. Returns a dictionary like {"power": 2, "point": 1}. Call it once, when the enemy dies.
+func roll_drops() -> Dictionary:
+	var result := guaranteed.duplicate()
+	var entries: Array = drop_table.get("entries", [])
+	for i in drop_table.get("rolls", 0):
+		var pick := _pick_weighted(entries)
+		if pick != "" and pick != "none":
+			result[pick] = result.get(pick, 0) + 1
+	return result
+
+## Picks one entry's "drop" name at random. An entry with weight 50 is five times as likely as one with
+## weight 10. Returns "" when there are no entries or every weight is zero.
+func _pick_weighted(entries: Array) -> String:
+	var total := 0.0
+	for entry in entries:
+		total += entry.get("weight", 1.0)
+	if total <= 0.0:
+		return ""
+	var roll := randf() * total
+	for entry in entries:
+		roll -= entry.get("weight", 1.0)
+		if roll < 0.0:
+			return entry["drop"]
+	return entries.back()["drop"]
